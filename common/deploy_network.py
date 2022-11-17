@@ -43,6 +43,11 @@ tf.app.flags.DEFINE_boolean('seg4', False,
                             'on short-axis images and atrial segmentation on long-axis images,'
                             'the networks are trained using 3,975 subjects from Application 2964.')
 
+# workaround for issue on GeForce RTX20xx GPUs
+# https://github.com/tensorflow/tensorflow/issues/36025#issuecomment-628145158
+gpu_devices = tf.config.experimental.list_physical_devices("GPU")
+for device in gpu_devices:
+    tf.config.experimental.set_memory_growth(device, True)
 
 if __name__ == '__main__':
     with tf.Session() as sess:

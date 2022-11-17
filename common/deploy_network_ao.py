@@ -48,6 +48,11 @@ tf.app.flags.DEFINE_integer('weight_R', 5,
 tf.app.flags.DEFINE_float('weight_r', 0.1,
                           'Power of weight for the seq2seq loss. 0: uniform; 1: linear; 2: square.')
 
+# workaround for issue on GeForce RTX20xx GPUs
+# https://github.com/tensorflow/tensorflow/issues/36025#issuecomment-628145158
+gpu_devices = tf.config.experimental.list_physical_devices("GPU")
+for device in gpu_devices:
+    tf.config.experimental.set_memory_growth(device, True)
 
 if __name__ == '__main__':
     with tf.Session() as sess:
