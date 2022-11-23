@@ -1,0 +1,10 @@
+pandas
+python-dateutil
+scikit-image
+scipy
+seaborn
+vtk
+pydicom
+nibabel
+opencv-python
+SimpleITK

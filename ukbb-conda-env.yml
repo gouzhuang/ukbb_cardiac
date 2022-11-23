@@ -1,0 +1,6 @@
+name: ukbb
+dependencies:
+  - python=3.6
+  - ipython
+  - jupyter
+  - tensorflow-gpu=1.15.*
