@@ -50,11 +50,11 @@ for device in gpu_devices:
     tf.config.experimental.set_memory_growth(device, True)
 
 if __name__ == '__main__':
-    with tf.Session() as sess:
-        sess.run(tf.global_variables_initializer())
+    with tf.compat.v1.Session() as sess:
+        sess.run(tf.compat.v1.global_variables_initializer())
 
         # Import the computation graph and restore the variable values
-        saver = tf.train.import_meta_graph('{0}.meta'.format(FLAGS.model_path))
+        saver = tf.compat.v1.train.import_meta_graph('{0}.meta'.format(FLAGS.model_path))
         saver.restore(sess, '{0}'.format(FLAGS.model_path))
 
         print('Start deployment on the data set ...')
