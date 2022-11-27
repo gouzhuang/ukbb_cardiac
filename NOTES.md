@@ -50,7 +50,56 @@ if `<output_dir>` is omitted, the default is `<data_dir>.converted`, which is at
     ...     ...
 ```
 
-### 2. [predict.py](predict.py)
+### 2. [data/convert_data2.py](data/convert_data2.py)
+
+**Usage:**
+```sh
+python3 data/convert_data2.py <data_dir> [<output_dir>]
+```
+
+if `<output_dir>` is omitted, the default is `<data_dir>.converted`, which is at the save level as `<data_dir>`.
+`<output_dir>` will be created if it does not exist
+
+**structure of input data dir:**
+```text
+<data_dir>/
+     |
+     +--<20208-long>/
+     |       |
+     |       +--<eid1>_20208_<num>_0.zip
+     |       +--<eid2>_20208_<num>_0.zip
+     |       +--<eid3>_20208_<num>_0.zip
+     |       ...
+     |
+     +--<20209-short>/
+             |
+             +--<eid1>_20209_<num>_0.zip
+             +--<eid2>_20209_<num>_0.zip
+             +--<eid3>_20209_<num>_0.zip
+             ...    
+```
+
+**structure of output dir:**
+```text
+<output_dir>/
+     |
+     +--<eid1>_<num>/
+     |       |
+     |       +--la_2ch.nii.gz
+     |       +--la_3ch.nii.gz
+     |       +--la_4ch.nii.gz
+     |       +--sa.nii.gz
+     |
+     +--<eid2>_<num>/
+     |       |
+     |       +--la_2ch.nii.gz
+     |       +--la_3ch.nii.gz
+     |       +--la_4ch.nii.gz
+     |       +--sa.nii.gz
+    ...
+```
+
+### 3. [predict.py](predict.py)
 
 **Usage:**
 ```sh
