@@ -123,14 +123,24 @@ if __name__ == '__main__':
         zip_list.append(os.path.join(SHORT_AXIS_DIR, item))    # append to the list
         zip_files[eid_and_num] = zip_list   # update the dict
 
+    skipped = 0
     # Convert image data for each <eid>_<num>
-    for eid_and_num, zip_list in zip_files.items():
-        print(f'converting {eid_and_num}...', end='', flush=True)
+    for eid_and_num, zip_list in sorted(zip_files.items(), key=lambda x:x[0]):
         sub_output_dir = os.path.join(output_dir, eid_and_num)
-        if not os.path.exists(sub_output_dir):
-            os.mkdir(sub_output_dir)
+        if os.path.exists(sub_output_dir):
+            # print(f'skipping completed {eid_and_num}')
+            skipped += 1
+            continue
+        if skipped > 0:
+            print(f'{skipped} completed subjects skipped')
+            skipped = 0
+        print(f'converting {eid_and_num}...', end='', flush=True)
+        tmp_sub_output_dir = os.path.join(output_dir, f'{eid_and_num}.working')
+        if os.path.exists(tmp_sub_output_dir):
+            shutil.rmtree(tmp_sub_output_dir)
+        os.mkdir(tmp_sub_output_dir)
         # Decompress the zip files for this <eid>_<num>
-        dicom_dir = os.path.join(sub_output_dir, 'dicom')
+        dicom_dir = os.path.join(tmp_sub_output_dir, 'dicom')
         if not os.path.exists(dicom_dir):
             os.mkdir(dicom_dir)
         
@@ -167,9 +177,16 @@ if __name__ == '__main__':
         # Convert dicom files into nifti images
         dset = Biobank_Dataset(dicom_dir, None)
         dset.read_dicom_images()
-        dset.convert_dicom_to_nifti(sub_output_dir)
+        dset.convert_dicom_to_nifti(tmp_sub_output_dir)
 
         # Remove intermediate files
         shutil.rmtree(dicom_dir, ignore_errors=True)
 
+        # rename temp working dir to the final dir
+        shutil.move(tmp_sub_output_dir, sub_output_dir)
+
+
         print('done')
+    
+    if skipped > 0:
+        print(f'{skipped} completed subjects skipped')

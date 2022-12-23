@@ -13,6 +13,7 @@
 # limitations under the License.
 # ============================================================================
 import os
+from pathlib import Path
 import time
 import math
 import numpy as np
@@ -61,21 +62,32 @@ if __name__ == '__main__':
         start_time = time.time()
 
         # Process each subject subdirectory
-        data_list = sorted(os.listdir(FLAGS.data_dir))
+        data_list = sorted(filter(lambda x: not x.startswith('.'), os.listdir(FLAGS.data_dir)))
         processed_list = []
         table_time = []
+        total = len(data_list)
+        skipped = 0
+        completed = 0
         for data in data_list:
-            print(data)
+            
             data_dir = os.path.join(FLAGS.data_dir, data)
 
-            if FLAGS.seq_name == 'la_4ch' and FLAGS.seg4:
-                seg_name = '{0}/seg4_{1}.nii.gz'.format(data_dir, FLAGS.seq_name)
-            else:
-                seg_name = '{0}/seg_{1}.nii.gz'.format(data_dir, FLAGS.seq_name)
-            if os.path.exists(seg_name):
-                continue
-
             if FLAGS.process_seq:
+                if FLAGS.seq_name == 'la_4ch' and FLAGS.seg4:
+                    completion_marker = f'{data_dir}/.seg4_{FLAGS.seq_name}.done'
+                else:
+                    completion_marker = f'{data_dir}/.seg_{FLAGS.seq_name}.done'
+                if os.path.exists(completion_marker):
+                    skipped += 1
+                    completed += 1
+                    continue
+
+                if skipped > 0:
+                    print(f'{skipped} completed subjects skipped')
+                    skipped = 0
+
+                print(data)
+
                 # Process the temporal sequence
                 image_name = '{0}/{1}.nii.gz'.format(data_dir, FLAGS.seq_name)
 
@@ -158,7 +170,24 @@ if __name__ == '__main__':
                         else:
                             seg_name = '{0}/seg_{1}_{2}.nii.gz'.format(data_dir, FLAGS.seq_name, fr)
                         nib.save(nib.Nifti1Image(pred[:, :, :, k[fr]], nim.affine), seg_name)
+                
+                # Touch the completion marker
+                Path(completion_marker).touch()
+                completed += 1
+                print(f'progress: {completed/total * 100:.2f}%')
+
             else:
+                completion_marker = f'{data_dir}/.{FLAGS.seq_name}_EDES.done'
+                if os.path.exists(completion_marker):
+                    skipped += 1
+                    continue
+
+                if skipped > 0:
+                    print(f'{skipped} completed subjects skipped')
+                    skipped = 0
+
+                print(data)
+
                 # Process ED and ES time frames
                 image_ED_name = '{0}/{1}_{2}.nii.gz'.format(data_dir, FLAGS.seq_name, 'ED')
                 image_ES_name = '{0}/{1}_{2}.nii.gz'.format(data_dir, FLAGS.seq_name, 'ES')
@@ -224,11 +253,19 @@ if __name__ == '__main__':
                             seg_name = '{0}/seg_{1}_{2}.nii.gz'.format(data_dir, FLAGS.seq_name, fr)
                         nib.save(nim2, seg_name)
 
-        if FLAGS.process_seq:
-            print('Average segmentation time = {:.3f}s per sequence'.format(np.mean(table_time)))
-        else:
-            print('Average segmentation time = {:.3f}s per frame'.format(np.mean(table_time)))
+                # Touch the completion marker
+                Path(completion_marker).touch()
+
+        if skipped > 0:
+            print(f'{skipped} completed subjects skipped')
+
+        if len(table_time) > 0:
+            if FLAGS.process_seq:
+                print('Average segmentation time = {:.3f}s per sequence'.format(np.mean(table_time)))
+            else:
+                print('Average segmentation time = {:.3f}s per frame'.format(np.mean(table_time)))
         process_time = time.time() - start_time
-        print('Including image I/O, CUDA resource allocation, '
-              'it took {:.3f}s for processing {:d} subjects ({:.3f}s per subjects).'.format(
-            process_time, len(processed_list), process_time / len(processed_list)))
+        if len(processed_list) > 0:
+            print('Including image I/O, CUDA resource allocation, '
+                'it took {:.3f}s for processing {:d} subjects ({:.3f}s per subjects).'.format(
+                process_time, len(processed_list), process_time / len(processed_list)))

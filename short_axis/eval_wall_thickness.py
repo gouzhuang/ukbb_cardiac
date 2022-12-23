@@ -17,6 +17,7 @@ import argparse
 import pandas as pd
 from ukbb_cardiac.common.cardiac_utils import *
 
+BATCH_SIZE = 500
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -25,10 +26,31 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     data_path = args.data_dir
-    data_list = sorted(os.listdir(data_path))
+
+    output_dir = os.path.dirname(args.output_csv)
+    output_csv_prefix = os.path.basename(args.output_csv) + '.'
+    completed_csv_list = sorted(filter(lambda x:x.startswith(output_csv_prefix), os.listdir(output_dir)))
+    completed_subjects = set()
+
+    batch = 0
+    for csv_file in completed_csv_list:
+        csv_batch = int(csv_file[len(output_csv_prefix):])
+        if csv_batch > batch:
+            batch = csv_batch
+        csv_df = pd.read_csv(os.path.join(output_dir, csv_file))
+        completed_subjects.update(csv_df[csv_df.columns[0]].values.tolist())
+    batch += 1
+
+    data_list = sorted(filter(lambda x:not x.startswith('.'), os.listdir(data_path)))
     table = []
     processed_list = []
+    processed = 0
+    skipped = 0
+    count = 0
     for data in data_list:
+        if data in completed_subjects:
+            skipped += 1
+            continue
         print(data)
         data_dir = os.path.join(data_path, data)
 
@@ -50,13 +72,33 @@ if __name__ == '__main__':
             line = df['Thickness'].values
             table += [line]
             processed_list += [data]
-
-    # Save wall thickness for all the subjects
-    df = pd.DataFrame(table, index=processed_list,
-                      columns=['WT_AHA_1 (mm)', 'WT_AHA_2 (mm)', 'WT_AHA_3 (mm)',
-                               'WT_AHA_4 (mm)', 'WT_AHA_5 (mm)', 'WT_AHA_6 (mm)',
-                               'WT_AHA_7 (mm)', 'WT_AHA_8 (mm)', 'WT_AHA_9 (mm)',
-                               'WT_AHA_10 (mm)', 'WT_AHA_11 (mm)', 'WT_AHA_12 (mm)',
-                               'WT_AHA_13 (mm)', 'WT_AHA_14 (mm)', 'WT_AHA_15 (mm)', 'WT_AHA_16 (mm)',
-                               'WT_Global (mm)'])
-    df.to_csv(args.output_csv)
+            processed += 1
+            count += 1
+            if count >= BATCH_SIZE:
+                # write out current batch
+                df = pd.DataFrame(table, index=processed_list,
+                                columns=['WT_AHA_1 (mm)', 'WT_AHA_2 (mm)', 'WT_AHA_3 (mm)',
+                                        'WT_AHA_4 (mm)', 'WT_AHA_5 (mm)', 'WT_AHA_6 (mm)',
+                                        'WT_AHA_7 (mm)', 'WT_AHA_8 (mm)', 'WT_AHA_9 (mm)',
+                                        'WT_AHA_10 (mm)', 'WT_AHA_11 (mm)', 'WT_AHA_12 (mm)',
+                                        'WT_AHA_13 (mm)', 'WT_AHA_14 (mm)', 'WT_AHA_15 (mm)', 'WT_AHA_16 (mm)',
+                                        'WT_Global (mm)'])
+                df.to_csv(os.path.join(output_dir, f'{output_csv_prefix}{batch:04d}'))
+                count = 0
+                batch += 1
+                table = []
+                processed_list = []
+        
+    # write out the remainders
+    if count > 0:
+        # write out current batch
+        df = pd.DataFrame(table, index=processed_list,
+                        columns=['WT_AHA_1 (mm)', 'WT_AHA_2 (mm)', 'WT_AHA_3 (mm)',
+                                'WT_AHA_4 (mm)', 'WT_AHA_5 (mm)', 'WT_AHA_6 (mm)',
+                                'WT_AHA_7 (mm)', 'WT_AHA_8 (mm)', 'WT_AHA_9 (mm)',
+                                'WT_AHA_10 (mm)', 'WT_AHA_11 (mm)', 'WT_AHA_12 (mm)',
+                                'WT_AHA_13 (mm)', 'WT_AHA_14 (mm)', 'WT_AHA_15 (mm)', 'WT_AHA_16 (mm)',
+                                'WT_Global (mm)'])
+        df.to_csv(os.path.join(output_dir, f'{output_csv_prefix}{batch:04d}'))
+    
+    print(f'processed: {processed}, skipped: {skipped}')
