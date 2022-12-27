@@ -97,6 +97,10 @@ if __name__ == '__main__':
         print(f'{sa_data_dir} not found', file=sys.stderr)
         exit(-1)
 
+    tmp_dir = os.path.join(os.getenv('HOME'), 'tmp')
+    if not os.path.exists(tmp_dir):
+        os.mkdir(tmp_dir)
+
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
 
@@ -140,7 +144,7 @@ if __name__ == '__main__':
             shutil.rmtree(tmp_sub_output_dir)
         os.mkdir(tmp_sub_output_dir)
         # Decompress the zip files for this <eid>_<num>
-        dicom_dir = os.path.join(tmp_sub_output_dir, 'dicom')
+        dicom_dir = os.path.join(tmp_dir, f'{eid_and_num}_dicom')
         if not os.path.exists(dicom_dir):
             os.mkdir(dicom_dir)
         
