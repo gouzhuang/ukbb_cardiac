@@ -6,5 +6,5 @@ seaborn
 vtk
 pydicom
 nibabel
-opencv-python
+opencv-python==4.6.0.66
 SimpleITK

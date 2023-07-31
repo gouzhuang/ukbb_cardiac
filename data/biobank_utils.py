@@ -65,13 +65,14 @@ class BaseImage(object):
 
 class Biobank_Dataset(object):
     """ Class for managing Biobank datasets """
-    def __init__(self, input_dir, cvi42_dir=None):
+    def __init__(self, input_dir, cvi42_dir=None, suppress_warning=False):
         """
             Initialise data
             This is important, otherwise the dictionaries will not be cleaned between instances.
             """
         self.subdir = {}
         self.data = {}
+        self.suppress_warning = suppress_warning
 
         # Find and sort the DICOM sub directories
         subdirs = sorted(os.listdir(input_dir))
@@ -125,10 +126,12 @@ class Biobank_Dataset(object):
                 tag_dir += [(os.path.join(input_dir, s), int(m.group(1)))]
 
         if not sax_dir:
-            print('Warning: SAX subdirectories not found!')
+            if not self.suppress_warning:
+                print('Warning: SAX subdirectories not found!')
             if sax_mix_dir:
-                print('But a mixed SAX directory has been found. '
-                      'We will sort it into directories for each slice.')
+                if not self.suppress_warning:
+                    print('But a mixed SAX directory has been found. '
+                        'We will sort it into directories for each slice.')
                 list = sorted(os.listdir(sax_mix_dir))
                 d = dicom.read_file(os.path.join(sax_mix_dir, list[0]))
                 T = d.CardiacNumberOfImages
@@ -141,10 +144,12 @@ class Biobank_Dataset(object):
                     sax_dir += [(s, z)]
 
         if not lax_2ch_dir and not lax_3ch_dir and not lax_4ch_dir:
-            print('Warning: LAX subdirectories not found!')
+            if not self.suppress_warning:
+                print('Warning: LAX subdirectories not found!')
             if lax_mix_dir:
-                print('But a mixed LAX directory has been found. '
-                      'We will sort it into directories for 2Ch, 3Ch and 4Ch views.')
+                if not self.suppress_warning:
+                    print('But a mixed LAX directory has been found. '
+                        'We will sort it into directories for 2Ch, 3Ch and 4Ch views.')
                 list = sorted(os.listdir(lax_mix_dir))
                 d = dicom.read_file(os.path.join(lax_mix_dir, list[0]))
                 T = d.CardiacNumberOfImages
@@ -234,8 +239,9 @@ class Biobank_Dataset(object):
             files = sorted(series[choose_suid])
 
         if len(files) < T:
-            print('Warning: {0}: Number of files < CardiacNumberOfImages! '
-                  'We will fill the missing files using duplicate slices.'.format(dir_name))
+            if not self.suppress_warning:
+                print('Warning: {0}: Number of files < CardiacNumberOfImages! '
+                    'We will fill the missing files using duplicate slices.'.format(dir_name))
         return(files)
 
     def read_dicom_images(self):
@@ -295,12 +301,14 @@ class Biobank_Dataset(object):
             if hasattr(d, 'SpacingBetweenSlices'):
                 dz = float(d.SpacingBetweenSlices)
             elif Z >= 2:
-                print('Warning: can not find attribute SpacingBetweenSlices. '
-                      'Calculate from two successive slices.')
+                if not self.suppress_warning:
+                    print('Warning: can not find attribute SpacingBetweenSlices. '
+                        'Calculate from two successive slices.')
                 dz = float(np.linalg.norm(pos_ul2 - pos_ul))
             else:
-                print('Warning: can not find attribute SpacingBetweenSlices. '
-                      'Use attribute SliceThickness instead.')
+                if not self.suppress_warning:
+                    print('Warning: can not find attribute SpacingBetweenSlices. '
+                        'Use attribute SliceThickness instead.')
                 dz = float(d.SliceThickness)
 
             # Affine matrix which converts the voxel coordinate to world coordinate

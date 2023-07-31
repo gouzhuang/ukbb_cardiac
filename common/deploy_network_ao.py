@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 import os
+from pathlib import Path
 import time
 import math
 import numpy as np
@@ -66,14 +67,29 @@ if __name__ == '__main__':
         start_time = time.time()
 
         # Process each subject subdirectory
-        data_list = sorted(os.listdir(FLAGS.data_dir))
+        data_list = sorted(filter(lambda x: not x.startswith('.'), os.listdir(FLAGS.data_dir)))
+        total = len(data_list)
+        skipped = 0
+        completed = 0
         processed_list = []
         table = []
         for data in data_list:
-            print(data)
             data_dir = os.path.join(FLAGS.data_dir, data)
 
+            
             if FLAGS.process_seq:
+                completion_marker = f'{data_dir}/.seg_{FLAGS.seq_name}.done'
+                if os.path.exists(completion_marker):
+                    skipped += 1
+                    completed += 1
+                    continue
+
+                if skipped > 0:
+                    print(f'{skipped} completed subjects skipped')
+                    skipped = 0
+
+                print(data)
+
                 # Process the temporal sequence
                 image_name = '{0}/{1}.nii.gz'.format(data_dir, FLAGS.seq_name)
 
@@ -203,11 +219,28 @@ if __name__ == '__main__':
                 seg_time = time.time() - start_seg_time
                 print('  Segmentation time = {:3f}s'.format(seg_time))
                 processed_list += [data]
+
+                # Touch the completion marker
+                Path(completion_marker).touch()
+                completed += 1
+                print(f'progress: {completed/total * 100:.2f}%')
+
             else:
                 if FLAGS.model == 'UNet-LSTM':
                     print('UNet-LSTM does not support frame-wise segmentation. '
                           'Please use the -process_seq flag.')
                     exit(0)
+
+                completion_marker = f'{data_dir}/.{FLAGS.seq_name}_EDES.done'
+                if os.path.exists(completion_marker):
+                    skipped += 1
+                    continue
+
+                if skipped > 0:
+                    print(f'{skipped} completed subjects skipped')
+                    skipped = 0
+
+                print(data)
 
                 # Process ED and ES time frames
                 image_ED_name = '{0}/{1}_{2}.nii.gz'.format(data_dir, FLAGS.seq_name, 'ED')
@@ -272,6 +305,12 @@ if __name__ == '__main__':
                         nib.save(nim2, '{0}/seg_{1}_{2}.nii.gz'.format(data_dir, FLAGS.seq_name, fr))
 
                 processed_list += [data]
+                
+                # Touch the completion marker
+                Path(completion_marker).touch()
+
+        if skipped > 0:
+            print(f'{skipped} completed subjects skipped')
 
         process_time = time.time() - start_time
         print('Including image I/O, CUDA resource allocation, '
